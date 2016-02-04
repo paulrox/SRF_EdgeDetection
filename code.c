@@ -43,17 +43,23 @@
 #include <stdio.h>
 #include "stm32f4xx.h"
 #include "stm32f4_discovery_lcd.h"
-#include "tm_stm32f4_gpio.h"
-#include "tm_stm32f4_i2c.h"
+#include "i2c_lib.h"
 
 #define ADDRESS		0xE0
+#define COMM_REG	0x00
+#define GAIN_REG	0x01
+#define RANGE_REG	0x02
+#define RES_CM		0x51
 #define RANGE		140 	/* 6 meters range */
-#define SCALE		0.25
+#define MAX_GAIN	0x02	/* Max gain 100 */
+#define SCALE		0.15
 #define SC_WIDTH	320
 #define SC_HEIGHT	240
 #define X_OFFSET	30
 #define Y_OFFSET	10
+#define SC_Y(x)		x / SCALE + Y_OFFSET
 #define AXIS_LENGHT	SC_HEIGHT - Y_OFFSET
+#define MAX_DIST	(AXIS_LENGHT - Y_OFFSET) * SCALE
 
 static void WPrint(uint16_t x, uint16_t y,char *s)
 {
@@ -67,11 +73,14 @@ static void printAxis()
 uint16_t y_mark = AXIS_LENGHT;
 uint8_t value = 0;
 char s[4];
+	LCD_SetTextColor(Red);
+	LCD_DrawUniLine(X_OFFSET + 1, AXIS_LENGHT, 320, AXIS_LENGHT);
+	LCD_SetTextColor(Black);
+	LCD_DrawUniLine(X_OFFSET, Y_OFFSET, X_OFFSET, AXIS_LENGHT);
+	LCD_DrawUniLine(X_OFFSET + 1, Y_OFFSET, 320, Y_OFFSET);
 
-	LCD_DrawUniLine(X_OFFSET, 5, X_OFFSET, AXIS_LENGHT);
-	LCD_DrawUniLine(X_OFFSET, AXIS_LENGHT + 1, 320, AXIS_LENGHT + 1);
 
-	for (y_mark = AXIS_LENGHT; y_mark >= 15; y_mark = y_mark - 15) {
+	for (y_mark = Y_OFFSET; y_mark <= AXIS_LENGHT; y_mark += 15) {
 		LCD_DrawUniLine(X_OFFSET, y_mark, X_OFFSET - 2, y_mark);
 		sprintf(s, "%d\0", value);
 		WPrint(0, y_mark - 4, s);
@@ -81,8 +90,9 @@ char s[4];
 
 static void InitSonar()
 {
-	TM_I2C_Init(I2C1, TM_I2C_PinsPack_2, 100000);
-	TM_I2C_Write(I2C1, ADDRESS, 0x02, RANGE);
+	I2C_init();
+	I2C_write(ADDRESS, RANGE_REG, RANGE);
+	I2C_write(ADDRESS, GAIN_REG, MAX_GAIN);
 }
 
 /*
@@ -120,19 +130,19 @@ char s[20];
 		x = X_OFFSET + 1;
 	}
 
-	data[0] = TM_I2C_Read(I2C1, ADDRESS, 0x03);	/* first echo low byte */
-	data[1] = TM_I2C_Read(I2C1, ADDRESS, 0x02);	/* first echo high byte */
-	y1 = (data[1]<<8) + data[0];
-	LCD_DrawUniLine(x, SC_HEIGHT - prev_y1 / SCALE - Y_OFFSET,
-			++x, SC_HEIGHT - y1 / SCALE - Y_OFFSET);
+	data[0] = I2C_read(ADDRESS, 0x03);	/* first echo low byte */
+	data[1] = I2C_read(ADDRESS, 0x02);	/* first echo high byte */
+	y1 = (data[1] << 8) + data[0];
+	if (y1 > MAX_DIST) y1 = MAX_DIST;
+	LCD_DrawUniLine(x, SC_Y(prev_y1), ++x, SC_Y(y1));
 	prev_y1 = y1;
 /*
 	LCD_SetTextColor(Red);
 	data[0] = TM_I2C_Read(I2C1, ADDRESS, 0x05);
 	data[1] = TM_I2C_Read(I2C1, ADDRESS, 0x04);
 	y2 = (data[1]<<8) + data[0];
-	LCD_DrawUniLine(x, SC_HEIGHT - prev_y2 / SCALE - Y_OFFSET,
-			++x, SC_HEIGHT - y2 / SCALE - Y_OFFSET);
+	LCD_DrawUniLine(x, prev_y2 / SCALE + Y_OFFSET,
+			++x, y2 / SCALE + Y_OFFSET);
 	prev_y2 = y2;
 	LCD_SetTextColor(Black);
 	*/
@@ -140,7 +150,7 @@ char s[20];
 
 TASK(TaskCapture)
 {
-	TM_I2C_Write(I2C1, ADDRESS, 0x00, 0x51);
+	I2C_write(ADDRESS, COMM_REG, RES_CM);
 }
 
 int main(void)

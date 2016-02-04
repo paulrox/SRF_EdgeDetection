@@ -57,8 +57,7 @@ CPU mySystem {
 			APP_SRC = "code.c";
 			APP_SRC = "Touch.c";
 			APP_SRC = "STMPE811QTR.c";
-			APP_SRC = "tm_stm32f4_gpio.c";
-			APP_SRC = "tm_stm32f4_i2c.c";
+			APP_SRC = "i2c_lib.c";
 			COMPILER_TYPE = GNU;
 			MULTI_STACK = FALSE;
 		};
