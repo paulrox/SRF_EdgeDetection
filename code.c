@@ -44,22 +44,7 @@
 #include "stm32f4xx.h"
 #include "stm32f4_discovery_lcd.h"
 #include "i2c_lib.h"
-
-#define ADDRESS		0xE0
-#define COMM_REG	0x00
-#define GAIN_REG	0x01
-#define RANGE_REG	0x02
-#define RES_CM		0x51
-#define RANGE		140 	/* 6 meters range */
-#define MAX_GAIN	0x02	/* Max gain 100 */
-#define SCALE		0.15
-#define SC_WIDTH	320
-#define SC_HEIGHT	240
-#define X_OFFSET	30
-#define Y_OFFSET	10
-#define SC_Y(x)		x / SCALE + Y_OFFSET
-#define AXIS_LENGHT	SC_HEIGHT - Y_OFFSET
-#define MAX_DIST	(AXIS_LENGHT - Y_OFFSET) * SCALE
+#include "defines.h"
 
 static void WPrint(uint16_t x, uint16_t y,char *s)
 {
@@ -111,10 +96,13 @@ TASK(TaskLCD)
 static uint8_t data[2] = {0 , 0};
 static uint16_t x = X_OFFSET + 1;
 static uint16_t y1 = 0;
+static uint16_t y1_f = 0;
 static uint16_t y2 = 0;
 static uint16_t prev_y1 = 0;
-static uint16_t prev_y2;
+static uint16_t prev_y2 = 0;
+static uint8_t max_echo;
 char s[20];
+uint8_t reg_addr;
 /*
 	LCD_Clear(White);
 	data[0] = TM_I2C_Read(I2C1, ADDRESS, 0x01);
@@ -129,23 +117,32 @@ char s[20];
 		printAxis();
 		x = X_OFFSET + 1;
 	}
-
+	max_echo = 0;
+	reg_addr = 0x05;
 	data[0] = I2C_read(ADDRESS, 0x03);	/* first echo low byte */
 	data[1] = I2C_read(ADDRESS, 0x02);	/* first echo high byte */
 	y1 = (data[1] << 8) + data[0];
-	if (y1 > MAX_DIST) y1 = MAX_DIST;
-	LCD_DrawUniLine(x, SC_Y(prev_y1), ++x, SC_Y(y1));
-	prev_y1 = y1;
+	while(I2C_read(ADDRESS, reg_addr) != 0 && reg_addr <= MAX_REG) {
+		max_echo++;
+		reg_addr += 2;
+	}
+	LCD_DrawFilledRect(290, 20, 310, 30, White, White);
+	sprintf(s, "echo: %d\0", max_echo);
+	WPrint(250, 20, s);
+	y1_f = K * prev_y1 + (1 - K) * y1;
+	if (y1_f > MAX_DIST) y1_f = MAX_DIST;
+	LCD_DrawUniLine(x, SC_Y(prev_y1), x + 1, SC_Y(y1_f));
+	prev_y1 = y1_f;
 /*
 	LCD_SetTextColor(Red);
-	data[0] = TM_I2C_Read(I2C1, ADDRESS, 0x05);
-	data[1] = TM_I2C_Read(I2C1, ADDRESS, 0x04);
+	data[0] = I2C_read(ADDRESS, 0x05);
+	data[1] = I2C_read(ADDRESS, 0x04);
 	y2 = (data[1]<<8) + data[0];
-	LCD_DrawUniLine(x, prev_y2 / SCALE + Y_OFFSET,
-			++x, y2 / SCALE + Y_OFFSET);
+	LCD_DrawUniLine(x, SC_Y(prev_y2), x + 1, SC_Y(y2));
 	prev_y2 = y2;
 	LCD_SetTextColor(Black);
 	*/
+	x++;
 }
 
 TASK(TaskCapture)
