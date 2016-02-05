@@ -6,6 +6,31 @@
 
 #include "i2c_lib.h"
 
+/* Sends the start sequence and the device address */
+static uint8_t I2C_start(uint8_t address, uint8_t direction)
+{
+uint32_t timeout;
+
+	timeout = TIMEOUT_T;
+	/* send the start sequence */
+	I2C_GenerateSTART(I2C1, ENABLE);
+	/* wait until the slave has acknowledged the start sequence */
+	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT)) {
+		timeout--;
+		if (timeout == 0) return 1;	/* no response */
+	}
+	/* send the slave address */
+	I2C_Send7bitAddress(I2C1, address, direction);
+	/* wait the acknowledge */
+	if(direction == I2C_Direction_Transmitter){
+		while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
+	}
+	else if(direction == I2C_Direction_Receiver){
+		while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
+	}
+	return 0;	/* ok */
+}
+
 void I2C_init()
 {
 /* Initialization structures */
@@ -52,53 +77,59 @@ I2C_InitTypeDef I2C_InitStruct;
 	I2C_Cmd(I2C1, ENABLE);
 }
 
-/* Sends the start sequence and the device address */
-static void I2C_start(uint8_t address, uint8_t direction)
+uint8_t I2C_read(uint8_t address, uint8_t reg, uint8_t *data)
 {
-	/* send the start sequence */
-	I2C_GenerateSTART(I2C1, ENABLE);
-	/* wait until the slave has acknowledged the start sequence */
-	while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_MODE_SELECT));
-	/* send the slave address */
-	I2C_Send7bitAddress(I2C1, address, direction);
-	/* wait the acknowledge */
-	if(direction == I2C_Direction_Transmitter){
-		while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
-	}
-	else if(direction == I2C_Direction_Receiver){
-		while(!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
-	}
-}
-
-uint8_t I2C_read(uint8_t address, uint8_t reg)
-{
-uint8_t data;
+uint32_t timeout = TIMEOUT_T;
 
 	/* send the start sequence and the address */
-	I2C_start(address, I2C_Direction_Transmitter);
+	if (I2C_start(address, I2C_Direction_Transmitter) != 0) {
+		return START_TIMEOUT;
+	}
 	/* send the register location */
 	I2C_SendData(I2C1, reg);
+	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED)) {
+		timeout--;
+		if (timeout == 0) return REG_TIMEOUT;
+	}
+	timeout = TIMEOUT_T;
 	/* disable ack */
 	I2C_AcknowledgeConfig(I2C1, DISABLE);
 	/* send another start sequence (repeated start) */
-	I2C_start(address, I2C_Direction_Receiver);
-	while( !I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED) );
+	if (I2C_start(address, I2C_Direction_Receiver) != 0) {
+		return RESTART_TIMEOUT;
+	}
+	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_RECEIVED)) {
+		timeout--;
+		if (timeout == 0) return RECEIVE_TIMEOUT;
+	}
 	/* read data from I2C1 data register and return data byte */
-	data = I2C_ReceiveData(I2C1);
+	*data = I2C_ReceiveData(I2C1);
 	I2C_GenerateSTOP(I2C1, ENABLE);
-	return data;
+	return NO_ERR;
 }
 
-void I2C_write(uint8_t address, uint8_t reg, uint8_t data)
+uint8_t I2C_write(uint8_t address, uint8_t reg, uint8_t data)
 {
+uint32_t timeout = TIMEOUT_T;
+
 	/* send the start sequence and the address */
-	I2C_start(address, I2C_Direction_Transmitter);
+	if (I2C_start(address, I2C_Direction_Transmitter) != 0) {
+		return START_TIMEOUT;
+	}
 	/* send the register location */
 	I2C_SendData(I2C1, reg);
-	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED)) {
+		timeout--;
+		if (timeout == 0) return REG_TIMEOUT;
+	}
+	timeout = TIMEOUT_T;
 	/* send the data byte */
 	I2C_SendData(I2C1, data);
-	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+	while (!I2C_CheckEvent(I2C1, I2C_EVENT_MASTER_BYTE_TRANSMITTED)) {
+		timeout--;
+		if (timeout == 0) return SEND_TIMEOUT;
+	}
 	I2C_GenerateSTOP(I2C1, ENABLE);
+	return NO_ERR;
 }
 

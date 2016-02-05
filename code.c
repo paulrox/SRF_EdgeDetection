@@ -75,8 +75,9 @@ char s[4];
 
 static void InitSonar()
 {
+uint8_t ret;
 	I2C_init();
-	I2C_write(ADDRESS, RANGE_REG, RANGE);
+	ret = I2C_write(ADDRESS, RANGE_REG, RANGE);
 	I2C_write(ADDRESS, GAIN_REG, MAX_GAIN);
 }
 
@@ -103,6 +104,7 @@ static uint16_t prev_y2 = 0;
 static uint8_t max_echo;
 char s[20];
 uint8_t reg_addr;
+uint8_t tmp;
 /*
 	LCD_Clear(White);
 	data[0] = TM_I2C_Read(I2C1, ADDRESS, 0x01);
@@ -112,26 +114,30 @@ uint8_t reg_addr;
 	sprintf(s, "dist: %d\0", data[1]);
 	WPrint(150, 200, s);
 */
-	if (x == SC_WIDTH) {
+	if (x >= SC_WIDTH) {
 		LCD_Clear(White);
 		printAxis();
 		x = X_OFFSET + 1;
 	}
 	max_echo = 0;
 	reg_addr = 0x05;
-	data[0] = I2C_read(ADDRESS, 0x03);	/* first echo low byte */
-	data[1] = I2C_read(ADDRESS, 0x02);	/* first echo high byte */
+	//while(I2C_read(ADDRESS, COMM_REG) == 0xFF);
+	I2C_read(ADDRESS, 0x03, &data[0]);	/* first echo low byte */
+	I2C_read(ADDRESS, 0x02, &data[1]);	/* first echo high byte */
 	y1 = (data[1] << 8) + data[0];
-	while(I2C_read(ADDRESS, reg_addr) != 0 && reg_addr <= MAX_REG) {
+	/*
+	while(I2C_read(ADDRESS, reg_addr, &tmp) == NO_ERR && tmp != 0 &&
+			reg_addr <= MAX_REG) {
 		max_echo++;
 		reg_addr += 2;
 	}
 	LCD_DrawFilledRect(290, 20, 310, 30, White, White);
 	sprintf(s, "echo: %d\0", max_echo);
 	WPrint(250, 20, s);
+	*/
 	y1_f = K * prev_y1 + (1 - K) * y1;
 	if (y1_f > MAX_DIST) y1_f = MAX_DIST;
-	LCD_DrawUniLine(x, SC_Y(prev_y1), x + 1, SC_Y(y1_f));
+	LCD_DrawUniLine(x, SC_Y(prev_y1), x + 2, SC_Y(y1_f));
 	prev_y1 = y1_f;
 /*
 	LCD_SetTextColor(Red);
@@ -142,19 +148,19 @@ uint8_t reg_addr;
 	prev_y2 = y2;
 	LCD_SetTextColor(Black);
 	*/
-	x++;
+	x += 2;
 }
+
 
 TASK(TaskCapture)
 {
-	I2C_write(ADDRESS, COMM_REG, RES_CM);
+uint8_t ret;
+	ret = I2C_write(ADDRESS, COMM_REG, RES_CM);
+
 }
 
 int main(void)
 {
-	uint8_t test;
-	uint8_t revision = 0;
-
 	/* Preconfiguration before using DAC----------------------------------------*/
 	GPIO_InitTypeDef GPIO_InitStructure;
 
