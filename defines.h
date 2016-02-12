@@ -15,9 +15,10 @@
 #define COMM_REG	0x00	/* command register */
 #define GAIN_REG	0x01	/* gain register */
 #define RANGE_REG	0x02	/* range register */
+#define RES_INCH	0x50	/* ranging results in inches */
 #define RES_CM		0x51	/* ranging results in centimetres */
 #define RANGE		140 	/* 6 meters range */
-#define MAX_GAIN	0x02	/* Max gain 100 */
+#define MAX_GAIN	0x0C	/* Max gain 145 */
 #define MAX_REG		35		/* max device register */
 /**
  * @}
@@ -31,7 +32,10 @@
 #define SC_HEIGHT	240		/* display height */
 #define X_OFFSET	30
 #define Y_OFFSET	10
+#define FONT_SMALL	&Font8x8
+#define FONT_BIG	&Font12x12
 /* converts the real coordinate into a screen coordinate */
+#define SC_X(x)		x + X_OFFSET
 #define SC_Y(x)		x / SCALE + Y_OFFSET
 /* length of the displayed vertical axis */
 #define AXIS_LENGHT	SC_HEIGHT - Y_OFFSET
@@ -44,7 +48,9 @@
  * @defgroup OTHERS Other Defines
  * @{
  */
-#define K			0.7 	/* filter constant */
+#define K			0.85 	/* filter constant */
+#define MAX_POINTS	290
+#define MAX_ROUNDS	1
 /**
  * @}
  */

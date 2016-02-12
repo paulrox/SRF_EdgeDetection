@@ -1,13 +1,20 @@
-/* ###*B*###
+/**
+ ******************************************************************************
+ * @author Paolo Sassi
+ * @date 21 January 2016
+ * @brief Erika Enterprise configuration file.
+ ******************************************************************************
+ * @attention
+ *
  * ERIKA Enterprise - a tiny RTOS for small microcontrollers
  *
- * Copyright (C) 2002-2011  Evidence Srl
+ * Copyright (C) 2002-2013  Evidence Srl
  *
  * This file is part of ERIKA Enterprise.
  *
  * ERIKA Enterprise is free software; you can redistribute it
  * and/or modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation, 
+ * version 2 as published by the Free Software Foundation,
  * (with a special exception described below).
  *
  * Linking this code statically or dynamically with other modules is
@@ -36,21 +43,13 @@
  * version 2 along with ERIKA Enterprise; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301 USA.
- * ###*E*### */
-
-/*
- * Author: 2013 Gianluca Franchino
- * 
+ ******************************************************************************
  */
 
 CPU mySystem {
 
 	OS myOs {
 		EE_OPT = "DEBUG";
-		//EE_OPT = "VERBOSE";
-		//EE_OPT = "__KEIL_4_54_OLDER__";
-		//EE_OPT = "__KEIL_USE_AXF_EXT__";
-		//LDFLAGS =" --specs=rdimon.specs -lrdimon";
 		
 		CPU_DATA = CORTEX_MX {
 			MODEL = M4;
@@ -58,8 +57,9 @@ CPU mySystem {
 			APP_SRC = "Touch.c";
 			APP_SRC = "STMPE811QTR.c";
 			APP_SRC = "i2c_lib.c";
+			APP_SRC = "aux.c";
 			COMPILER_TYPE = GNU;
-			MULTI_STACK = FALSE;
+			MULTI_STACK = TRUE;
 		};
 		EE_OPT = "__USE_SYSTICK__";
 
@@ -85,7 +85,7 @@ CPU mySystem {
 				};
 		};
 		
-		STATUS = EXTENDED;
+		STATUS = STANDARD;
 		STARTUPHOOK = FALSE;
 		ERRORHOOK = FALSE;
 		SHUTDOWNHOOK = FALSE;
@@ -95,31 +95,65 @@ CPU mySystem {
 		USEPARAMETERACCESS = FALSE;
 		USERESSCHEDULER = FALSE;
 
-		KERNEL_TYPE = FP;
+		KERNEL_TYPE = ECC1;
 
 	};
 	
-	COUNTER myCounter;
+	COUNTER myCounter {
+		MINCYCLE = 4;
+		MAXALLOWEDVALUE = 0xFFFF ;
+		TICKSPERBASE = 1;
+	};
+	
+		
+	EVENT sleep_event {
+		MASK = AUTO; 
+	};
 
+	ALARM AlarmGR {
+		COUNTER = myCounter;
+		ACTION = ACTIVATETASK { TASK = GetRanging; };
+	};
+	
+	ALARM AlarmSR {
+		COUNTER = myCounter;
+		ACTION = ACTIVATETASK { TASK = StartRanging; };
+	};
+	
 	ALARM AlarmLCD {
 		COUNTER = myCounter;
-		ACTION = ACTIVATETASK { TASK = TaskLCD; };
-	};
-	ALARM AlarmCapture {
-		COUNTER = myCounter;
-		ACTION = ACTIVATETASK { TASK = TaskCapture; };
+		ACTION = ACTIVATETASK { TASK = LCDController; };
 	};
 	
-	TASK TaskLCD {
-		PRIORITY = 0x01;   /* High priority */
+	ALARM AlarmLCDsleep {
+		COUNTER = myCounter;
+		ACTION = SETEVENT { 
+			TASK = LCDController;
+			EVENT = sleep_event;
+		};
+	};
+	
+	TASK LCDController {
+		PRIORITY = 0x01;
+		AUTOSTART = FALSE;
+		STACK = PRIVATE {
+			SYS_SIZE = 1024;
+		};
+		ACTIVATION = 1;
+		SCHEDULE = FULL;
+		EVENT = sleep_event;
+	};
+	
+	TASK GetRanging {
+		PRIORITY = 0x02;   /* Low priority */
 		AUTOSTART = FALSE;
 		STACK = SHARED;
 		ACTIVATION = 1;    /* only one pending activation */
 		SCHEDULE = FULL;
 	};
 	
-	TASK TaskCapture {
-		PRIORITY = 0x02;   /* High priority */
+	TASK StartRanging {
+		PRIORITY = 0x03;   /* High priority */
 		AUTOSTART = FALSE;
 		STACK = SHARED;
 		ACTIVATION = 1;    /* only one pending activation */
