@@ -1,4 +1,6 @@
-/******************************************************************************
+/**
+ ******************************************************************************
+ * @file 	i2c_lib.c
  * @author	Paolo Sassi
  * @date	2 February 2016
  * @brief	I2C Library source file.
@@ -7,7 +9,22 @@
 
 #include "i2c_lib.h"
 
-/* Sends the start sequence and the device address */
+/**
+ * @addtogroup I2C_lib I2C Library
+ */
+
+/**
+ * @defgroup I2C_lib_private_func	I2C Library Private Functions
+ * @{
+ */
+
+/**
+ * @brief Sends the start sequence and the device address
+ * @param address Device address
+ * @param direction Communication direction
+ * @retval 0 No error occurred.
+ * @retval 1 An error occurred.
+ */
 static uint8_t I2C_start(uint8_t address, uint8_t direction)
 {
 uint32_t timeout;
@@ -31,7 +48,23 @@ uint32_t timeout;
 	}
 	return 0;	/* ok */
 }
+/**
+ * @}
+ */
 
+/**
+ * @defgroup I2C_lib_func_def I2C Library Functions Definitions
+ * @{
+ */
+
+/**
+ * @brief Initializes I2C Bus.
+ * @param None
+ * @retval None
+ *
+ * The used I2C bus is the I2C1, where PB8 pin is connected to the SCL line and
+ * the PB9 pin is connected to the SDA line.
+ */
 void I2C_init()
 {
 /* Initialization structures */
@@ -78,6 +111,17 @@ I2C_InitTypeDef I2C_InitStruct;
 	I2C_Cmd(I2C1, ENABLE);
 }
 
+/**
+ * @brief Reads one byte from the slave device
+ * @param address	Address of the device from which the byte is read.
+ * @param reg		Location of the register on the specified device.
+ * @param data		Received byte from the device;
+ * @retval NO_ERR	No error occurred.
+ * @retval START_TIMEOUT Start acknowledgment timeout.
+ * @retval REG_TIMEOUT	 Send register location timeout.
+ * @retval RESTART_TIMEOUT Repeated start timeout.
+ * @retval RECEIVE_TIMEOUT Receive data timeout.
+ */
 uint8_t I2C_read(uint8_t address, uint8_t reg, uint8_t *data)
 {
 uint32_t timeout = TIMEOUT_T;
@@ -109,6 +153,15 @@ uint32_t timeout = TIMEOUT_T;
 	return NO_ERR;
 }
 
+/**
+ * @brief Writes one byte to the slave device
+ * @param address	Address of the device to which the byte is written.
+ * @param reg		Location of the register on the specified device.
+ * @param data		Byte to be sent to the slave device.
+ * @retval NO_ERR	No error occurred.
+ * @retval REG_TIMEOUT Send register location timeout.
+ * @retval SEND_TIMEOUT Send data timeout.
+ */
 uint8_t I2C_write(uint8_t address, uint8_t reg, uint8_t data)
 {
 uint32_t timeout = TIMEOUT_T;
@@ -134,3 +187,6 @@ uint32_t timeout = TIMEOUT_T;
 	return NO_ERR;
 }
 
+/**
+ * @}
+ */

@@ -405,7 +405,7 @@ uint8_t IOE_ReadIOPin(uint32_t IO_Pin);
 TS_STATE* IOE_TS_GetState(void);
 
 /** 
-  * @brief Interrupts Mangement functions
+  * @brief Interrupts Management functions
   */
 FlagStatus IOE_GetGITStatus(uint8_t DeviceAddr, uint8_t Global_IT);
 uint8_t IOE_ClearGITPending(uint8_t DeviceAddr, uint8_t IO_IT);

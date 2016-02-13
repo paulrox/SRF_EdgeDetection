@@ -1,8 +1,9 @@
 /**
  ******************************************************************************
- * @author Paolo Sassi
- * @date 21 January 2016
- * @brief Application main source file.
+ * @file 	code.c
+ * @author 	Paolo Sassi
+ * @date 	21 January 2016
+ * @brief 	Application main source file.
  ******************************************************************************
  * @attention
  *
@@ -55,19 +56,50 @@
 #include "aux.h"
 #include "defines.h"
 
+/**
+ * @defgroup main Application
+ * @{
+ */
+
+/**
+ * @defgroup globals Global Variables
+ * @{
+ */
+
+/**
+ * @brief Number of elapsed ranging rounds
+ */
 uint8_t r_num = 0;
+/**
+ * @brief Buffer containing the ranging data
+ */
 uint16_t p_buff[MAX_POINTS];
 
+/**
+ * @}
+ */
 
-/*
- * SysTick ISR2
+/**
+ * @defgroup isr Interrupt Routines
+ * @{
  */
 ISR2(systick_handler)
 {
 	/* count the interrupts, waking up expired alarms */
 	CounterTick(myCounter);
 }
+/**
+ * @}
+ */
 
+/**
+ * @defgroup tasks Tasks
+ * @{
+ */
+
+/**
+ * @brief Handles the user interaction through the LCD display
+ */
 TASK(LCDController)
 {
 static uint16_t i;
@@ -86,18 +118,27 @@ uint32_t p_x, p_y;
 
 	if (r_num < MAX_ROUNDS) {
 		/* Waits 3 seconds, then starts the ranging */
-		for(i = 0; i < 3; i++) {
-			LCD_DrawFilledRect(40, 115, 300, 135, White, White);
-			sprintf(s, "Capturing starts in: %i\0", 3 - i);
+		for (i = 0; i < 3; i++) {
+			LCD_DrawFilledRect(230, 115, 300, 135, White, White);
+			sprintf(s, "Capturing starts in: %d\0", 3 - i);
 			WPrint(40, 120, s, FONT_BIG);
 			sleep(1000);
 		}
 		LCD_DrawFilledRect(40, 115, 300, 135, White, White);
-		SetRelAlarm(AlarmSR, 10, 100);
-		SetRelAlarm(AlarmGR, 75, 100);
+		SetRelAlarm(AlarmGR, 10, 50);
 	} else {
 		LCD_Clear(White);
 		printAxis();
+		LCD_SetTextColor(Red);
+		for (i = 0; i < MAX_POINTS - 1; i++) {
+					LCD_DrawUniLine(SC_X(x), SC_Y(p_buff[i]), SC_X(x + 1),
+							SC_Y(p_buff[i + 1]));
+					x += 1;
+		}
+		LCD_SetTextColor(Black);
+		cutOff(p_buff);
+		if (MAX_ROUNDS == 1) filterSamples(p_buff);
+		x = 0;
 		for (i = 0; i < MAX_POINTS - 1; i++) {
 			LCD_DrawUniLine(SC_X(x), SC_Y(p_buff[i]), SC_X(x + 1),
 					SC_Y(p_buff[i + 1]));
@@ -106,6 +147,10 @@ uint32_t p_x, p_y;
 	}
 }
 
+/**
+ * @brief Starts the ranging and stores the received data into the
+ * global buffer
+ */
 TASK(GetRanging)
 {
 static uint16_t i = 0;
@@ -120,6 +165,8 @@ char s[20];
 	}
 	low = high = 0;
 	LCD_SetTextColor(Black);
+	I2C_write(ADDRESS, COMM_REG, RES_CM);
+	sleep(45);
 	I2C_read(ADDRESS, 0x03, &low);	/* first echo low byte */
 	I2C_read(ADDRESS, 0x02, &high);	/* first echo high byte */
 	y = (high << 8) + low;
@@ -129,10 +176,10 @@ char s[20];
 	} else {
 		p_buff[i] = K * p_buff[i] + (1 - K) * y;
 	}
-	if (p_buff[i] > MAX_DIST) p_buff[i] = MAX_DIST;
+	if (p_buff[i] > MAX_DIST || p_buff[i] == 0) p_buff[i] = MAX_DIST;
 
-	LCD_DrawFilledRect(40, 115, 300, 135, White, White);
-	sprintf(s, "Ranging sample %d/%d\0", i, MAX_POINTS);
+	LCD_DrawFilledRect(130, 115, 300, 135, White, White);
+	sprintf(s, "Ranging... %.2f%%", (float)(i * 100) / MAX_POINTS);
 	WPrint(10, 120, s, FONT_BIG);
 
 	if (i == MAX_POINTS) {
@@ -140,19 +187,15 @@ char s[20];
 		i = 0;
 		LCD_Clear(White);
 		CancelAlarm(AlarmGR);
-		CancelAlarm(AlarmSR);
 		ActivateTask(LCDController);
 	} else {
 		i++;
 	}
 }
 
-
-TASK(StartRanging)
-{
-	I2C_write(ADDRESS, COMM_REG, RES_CM);
-}
-
+/**
+ * @brief Main task.
+ */
 int main(void)
 {
 	SystemInit();
@@ -165,23 +208,28 @@ int main(void)
 	EE_systick_enable_int();
 	EE_systick_start();
 
-	/* Initialize the LCD Display */
-
+	/* Initialize the LCD Display and the touch interface*/
 	IOE_Config();
 	STM32f4_Discovery_LCD_Init();
 	InitTouch(-0.0853, 0.0665, -331, 15);
 
 	/* Initialize the sonar */
-	//I2C_init();
-	I2C_write(ADDRESS, RANGE_REG, RANGE);
-	I2C_write(ADDRESS, GAIN_REG, MAX_GAIN);
+	sonarInit();
 
 	/* Clear the screen */
 	LCD_Clear(White);
 
+	/* Activates the initial task set */
 	ActivateTask(LCDController);
 
 	/* Forever loop: background activities (if any) should go here */
 	for (;;);
-
 }
+
+/**
+ * @}
+ */
+
+/**
+ * @}
+ */

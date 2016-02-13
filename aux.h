@@ -1,4 +1,5 @@
-/******************************************************************************
+/**
+ ******************************************************************************
  * @file 	aux.h
  * @author	Paolo Sassi
  * @date	10 February 2016
@@ -10,33 +11,28 @@
 #define AUX_H_
 
 /**
- * @defgroup auxiliary Auxiliary Functions
+ * @addtogroup auxiliary Auxiliary Functions
  * @{
  */
-/**
- * @brief Prints a string on the LCD display.
- * @param x X coordinate of the string position.
- * @param y Y coordinate of the string position.
- * @param s Pointer to the string to be displayed.
- * @param f Pointer to font data structure.
- * @retval None
- */
-void WPrint(uint16_t x, uint16_t y,char *s, sFONT *f);
 
 /**
- * @brief Prints the axis on the LCD display.
- * @param None
- * @retval None
+ * @defgroup aux_exp_func Auxiliary Exported Functions
+ * @{
  */
+
+uint8_t sonarInit();
+void WPrint(uint16_t x, uint16_t y, uint8_t *s, sFONT *f);
 void printAxis();
+void sleep(int32_t msec);
+void cutOff(uint16_t *buff);
+void filterSamples(uint16_t *buff);
 
 /**
- * @brief Makes the calling task enter a busy wait
- * for a fixed amount of milliseconds.
- * @param msec The amount of milliseconds the task will wait.
- * @retval None
+ * @}
  */
-void sleep(int32_t msec);
 
+/**
+ * @}
+ */
 
 #endif /* AUX_H_ */

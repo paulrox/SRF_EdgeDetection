@@ -115,11 +115,6 @@ CPU mySystem {
 		ACTION = ACTIVATETASK { TASK = GetRanging; };
 	};
 	
-	ALARM AlarmSR {
-		COUNTER = myCounter;
-		ACTION = ACTIVATETASK { TASK = StartRanging; };
-	};
-	
 	ALARM AlarmLCD {
 		COUNTER = myCounter;
 		ACTION = ACTIVATETASK { TASK = LCDController; };
@@ -129,6 +124,14 @@ CPU mySystem {
 		COUNTER = myCounter;
 		ACTION = SETEVENT { 
 			TASK = LCDController;
+			EVENT = sleep_event;
+		};
+	};
+	
+	ALARM AlarmSRFsleep {
+		COUNTER = myCounter;
+		ACTION = SETEVENT {
+			TASK = GetRanging;
 			EVENT = sleep_event;
 		};
 	};
@@ -147,17 +150,12 @@ CPU mySystem {
 	TASK GetRanging {
 		PRIORITY = 0x02;   /* Low priority */
 		AUTOSTART = FALSE;
-		STACK = SHARED;
+		STACK = PRIVATE {
+			SYS_SIZE = 1024;
+		};
 		ACTIVATION = 1;    /* only one pending activation */
 		SCHEDULE = FULL;
-	};
-	
-	TASK StartRanging {
-		PRIORITY = 0x03;   /* High priority */
-		AUTOSTART = FALSE;
-		STACK = SHARED;
-		ACTIVATION = 1;    /* only one pending activation */
-		SCHEDULE = FULL;
+		EVENT = sleep_event;
 	};
 
 	ISR systick_handler {
