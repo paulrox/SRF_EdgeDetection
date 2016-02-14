@@ -24,7 +24,11 @@ uint8_t sonarInit();
 void WPrint(uint16_t x, uint16_t y, uint8_t *s, sFONT *f);
 void printAxis();
 void sleep(int32_t msec);
+#ifdef	TEST
+uint8_t cutOff(uint16_t *buff);
+#else
 void cutOff(uint16_t *buff);
+#endif	/* TEST */
 void filterSamples(uint16_t *buff);
 
 /**

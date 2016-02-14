@@ -97,9 +97,15 @@ EventMaskType ev;
  * @param buff Buffer containing the sampled data.
  * @retval None
  */
-void cutOff(uint16_t *buff)
+#ifdef	TEST
+uint8_t cutOff(uint16_t *buff) \
+{ \
+uint8_t ret = 0;
+#else
+void cutOff(uint16_t *buff) \
 {
-int16_t min_i, max_i, last_i, i, j;
+#endif	/* TEST */
+int16_t min_i, max_i, i, j;
 
 	min_i = max_i = -1;
 	for (i = 0; i < MAX_POINTS - 1; i++) {
@@ -113,9 +119,15 @@ int16_t min_i, max_i, last_i, i, j;
 			for (j = min_i; j <= max_i; j++) {
 				buff[j] = MAX_DIST;
 			}
+#ifdef	TEST
+			ret = 1;
+#endif	/* TEST */
 			min_i = max_i = -1;
 		}
 	}
+#ifdef	TEST
+return ret;
+#endif	/* TEST */
 }
 
 /**
