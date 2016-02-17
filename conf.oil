@@ -96,7 +96,6 @@ CPU mySystem {
 		USERESSCHEDULER = FALSE;
 
 		KERNEL_TYPE = ECC1;
-
 	};
 	
 	COUNTER myCounter {
@@ -105,39 +104,33 @@ CPU mySystem {
 		TICKSPERBASE = 1;
 	};
 	
-		
 	EVENT sleep_event {
 		MASK = AUTO; 
 	};
 
-	ALARM AlarmGR {
+	ALARM AlarmRFC {
 		COUNTER = myCounter;
-		ACTION = ACTIVATETASK { TASK = GetRanging; };
+		ACTION = ACTIVATETASK { TASK = RFController; };
 	};
 	
-	ALARM AlarmLCD {
-		COUNTER = myCounter;
-		ACTION = ACTIVATETASK { TASK = LCDController; };
-	};
-	
-	ALARM AlarmLCDsleep {
+	ALARM AlarmACsleep {
 		COUNTER = myCounter;
 		ACTION = SETEVENT { 
-			TASK = LCDController;
+			TASK = AppController;
 			EVENT = sleep_event;
 		};
 	};
 	
-	ALARM AlarmSRFsleep {
+	ALARM AlarmRFCsleep {
 		COUNTER = myCounter;
 		ACTION = SETEVENT {
-			TASK = GetRanging;
+			TASK = RFController;
 			EVENT = sleep_event;
 		};
 	};
 	
-	TASK LCDController {
-		PRIORITY = 0x01;
+	TASK AppController {
+		PRIORITY = 0x01;	/* Low Priority */
 		AUTOSTART = FALSE;
 		STACK = PRIVATE {
 			SYS_SIZE = 1024;
@@ -147,8 +140,8 @@ CPU mySystem {
 		EVENT = sleep_event;
 	};
 	
-	TASK GetRanging {
-		PRIORITY = 0x02;   /* Low priority */
+	TASK RFController {
+		PRIORITY = 0x02;   /* High Priority */
 		AUTOSTART = FALSE;
 		STACK = PRIVATE {
 			SYS_SIZE = 1024;
@@ -163,5 +156,4 @@ CPU mySystem {
 		ENTRY = "SYSTICK";
 		PRIORITY = 1;
 	};
-
 };

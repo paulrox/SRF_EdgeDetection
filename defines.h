@@ -23,7 +23,7 @@
 #define GAIN_REG	0x01	/* gain register */
 #define RANGE_REG	0x02	/* range register */
 #define RES_INCH	0x50	/* ranging results in inches */
-#define RES_CM		0x51	/* ranging results in centimetres */
+#define RES_CM		0x51	/* ranging results in centimeters */
 #define RANGE		140 	/* 6 meters range */
 #define MAX_GAIN	0x0C	/* Max gain 145 */
 #define MAX_REG		35		/* max device register */
@@ -49,13 +49,16 @@
 /* maximum representable distance */
 #define MAX_DIST	(AXIS_LENGHT - Y_OFFSET) * SCALE
 
+/* maximum distance between two cut points */
 #define CUT_DIST	10
+/* CutOff sensibility */
+#define CUT_SENSE	3
 
 /**
  * @brief Other macros
  */
 #define K			0.85 	/* round correlation constant */
-#define F			0.85		/* samples filtering constant */
+#define F			0.75	/* samples filtering constant */
 
 #define MAX_POINTS	290		/* max stored samples */
 #define MAX_ROUNDS	1		/* max ranging rounds */

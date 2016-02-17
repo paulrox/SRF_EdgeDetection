@@ -85,9 +85,10 @@ TaskType task;
 EventMaskType ev;
 
 	GetTaskID(&task);
-	alarm = (task == LCDController) ? AlarmLCDsleep : AlarmSRFsleep;
+	alarm = (task == AppController) ? AlarmACsleep : AlarmRFCsleep;
 	SetRelAlarm(alarm, msec, 0);
-	while(GetEvent(task, &ev) == E_OK && ev != sleep_event);
+	//while(GetEvent(task, &ev) == E_OK && ev != sleep_event);
+	WaitEvent(sleep_event);
 	ClearEvent(sleep_event);
 }
 
@@ -109,10 +110,12 @@ int16_t min_i, max_i, i, j;
 
 	min_i = max_i = -1;
 	for (i = 0; i < MAX_POINTS - 1; i++) {
-		if (buff[i] == MAX_DIST && buff[i + 1] < MAX_DIST) {
+		if (buff[i] >= (MAX_DIST - CUT_SENSE) && buff[i + 1] <
+				(MAX_DIST - CUT_SENSE) && min_i == -1) {
 			min_i = i;
 		}
-		if (buff[i] < MAX_DIST && buff[i + 1] == MAX_DIST && min_i != -1) {
+		if (buff[i] < (MAX_DIST - CUT_SENSE) && buff[i + 1] >= (MAX_DIST - CUT_SENSE)
+				&& min_i != -1) {
 			max_i = i;
 		}
 		if (min_i != -1 && max_i != -1 && max_i - min_i <= CUT_DIST) {
@@ -124,6 +127,7 @@ int16_t min_i, max_i, i, j;
 #endif	/* TEST */
 			min_i = max_i = -1;
 		}
+		if (max_i - min_i > CUT_DIST) min_i = max_i = -1;
 	}
 #ifdef	TEST
 return ret;

@@ -100,7 +100,7 @@ ISR2(systick_handler)
 /**
  * @brief Handles the user interaction through the LCD display
  */
-TASK(LCDController)
+TASK(AppController)
 {
 static uint16_t i;
 char s[20];
@@ -125,17 +125,10 @@ uint32_t p_x, p_y;
 			sleep(1000);
 		}
 		LCD_DrawFilledRect(40, 115, 300, 135, White, White);
-		SetRelAlarm(AlarmGR, 10, 50);
+		SetRelAlarm(AlarmRFC, 10, 50);
 	} else {
 		LCD_Clear(White);
 		printAxis();
-		LCD_SetTextColor(Red);
-		for (i = 0; i < MAX_POINTS - 1; i++) {
-					LCD_DrawUniLine(SC_X(x), SC_Y(p_buff[i]), SC_X(x + 1),
-							SC_Y(p_buff[i + 1]));
-					x += 1;
-		}
-		LCD_SetTextColor(Black);
 		cutOff(p_buff);
 		if (MAX_ROUNDS == 1) filterSamples(p_buff);
 		x = 0;
@@ -151,7 +144,7 @@ uint32_t p_x, p_y;
  * @brief Starts the ranging and stores the received data into the
  * global buffer
  */
-TASK(GetRanging)
+TASK(RFController)
 {
 static uint16_t i = 0;
 uint16_t y = 0;
@@ -176,6 +169,8 @@ char s[20];
 	} else {
 		p_buff[i] = K * p_buff[i] + (1 - K) * y;
 	}
+	/* distance = 0 means that the object is beyond the SRF range,
+	 * so we put the detected distance to the maximum possible */
 	if (p_buff[i] > MAX_DIST || p_buff[i] == 0) p_buff[i] = MAX_DIST;
 
 	LCD_DrawFilledRect(130, 115, 300, 135, White, White);
@@ -186,8 +181,8 @@ char s[20];
 		r_num++;
 		i = 0;
 		LCD_Clear(White);
-		CancelAlarm(AlarmGR);
-		ActivateTask(LCDController);
+		CancelAlarm(AlarmRFC);
+		ActivateTask(AppController);
 	} else {
 		i++;
 	}
@@ -220,7 +215,7 @@ int main(void)
 	LCD_Clear(White);
 
 	/* Activates the initial task set */
-	ActivateTask(LCDController);
+	ActivateTask(AppController);
 
 	/* Forever loop: background activities (if any) should go here */
 	for (;;);
