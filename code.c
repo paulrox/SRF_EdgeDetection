@@ -52,6 +52,7 @@
 #include <stdio.h>
 #include "stm32f4xx.h"
 #include "stm32f4_discovery_lcd.h"
+
 #include "i2c_lib.h"
 #include "aux.h"
 #include "defines.h"
@@ -70,6 +71,7 @@
  * @brief Number of elapsed ranging rounds
  */
 uint8_t r_num = 0;
+
 /**
  * @brief Buffer containing the ranging data
  */
@@ -104,14 +106,13 @@ TASK(AppController)
 {
 static uint16_t i;
 char s[20];
-static uint16_t x = 0;
 uint32_t p_x, p_y;
 
 	if (r_num == 0) {
 		sprintf(s, "Touch the screen to\0");
-		WPrint(40, 120, s, FONT_BIG);
+		printString(40, 120, s, FONT_BIG);
 		sprintf(s, "start the ranging...\0");
-		WPrint(40, 150, s, FONT_BIG);
+		printString(40, 150, s, FONT_BIG);
 		GetTouch_SC_Sync(&p_x, &p_y);
 		LCD_Clear(White);
 	}
@@ -121,22 +122,16 @@ uint32_t p_x, p_y;
 		for (i = 0; i < 3; i++) {
 			LCD_DrawFilledRect(230, 115, 300, 135, White, White);
 			sprintf(s, "Capturing starts in: %d\0", 3 - i);
-			WPrint(40, 120, s, FONT_BIG);
+			printString(40, 120, s, FONT_BIG);
 			sleep(1000);
 		}
 		LCD_DrawFilledRect(40, 115, 300, 135, White, White);
+		/* Start the RFController task */
 		SetRelAlarm(AlarmRFC, 10, 50);
 	} else {
 		LCD_Clear(White);
-		printAxis();
-		cutOff(p_buff);
-		if (MAX_ROUNDS == 1) filterSamples(p_buff);
-		x = 0;
-		for (i = 0; i < MAX_POINTS - 1; i++) {
-			LCD_DrawUniLine(SC_X(x), SC_Y(p_buff[i]), SC_X(x + 1),
-					SC_Y(p_buff[i + 1]));
-			x += 1;
-		}
+		printAxis();			/* draws the axis */
+		printResults(p_buff);	/* draws the results */
 	}
 }
 
@@ -154,29 +149,32 @@ char s[20];
 	if (i == 0) {
 		LCD_Clear(White);
 		sprintf(s, "Ranging round %d out of %d", r_num + 1, MAX_ROUNDS);
-		WPrint(10, 10, s, FONT_SMALL);
+		printString(10, 10, s, FONT_SMALL);
 	}
 	low = high = 0;
 	LCD_SetTextColor(Black);
 	I2C_write(ADDRESS, COMM_REG, RES_CM);
+	/* Wait for ranging completion. Normally we should wait for
+	 * 65ms, but with this sensor setup we can shorten the wait time */
 	sleep(45);
 	I2C_read(ADDRESS, 0x03, &low);	/* first echo low byte */
 	I2C_read(ADDRESS, 0x02, &high);	/* first echo high byte */
 	y = (high << 8) + low;
-
-	if (r_num == 0) {
+	/* Correlation among various ranging rounds */
+	if (r_num == 0) {	/* first round */
 		p_buff[i] = y;
 	} else {
 		p_buff[i] = K * p_buff[i] + (1 - K) * y;
 	}
-	/* distance = 0 means that the object is beyond the SRF range,
+	/* p_buff[i] = 0 means that the object is beyond the SRF range,
 	 * so we put the detected distance to the maximum possible */
 	if (p_buff[i] > MAX_DIST || p_buff[i] == 0) p_buff[i] = MAX_DIST;
 
 	LCD_DrawFilledRect(130, 115, 300, 135, White, White);
 	sprintf(s, "Ranging... %.2f%%", (float)(i * 100) / MAX_POINTS);
-	WPrint(10, 120, s, FONT_BIG);
+	printString(10, 120, s, FONT_BIG);
 
+	/* Ranging operation completed */
 	if (i == MAX_POINTS) {
 		r_num++;
 		i = 0;
@@ -203,7 +201,7 @@ int main(void)
 	EE_systick_enable_int();
 	EE_systick_start();
 
-	/* Initialize the LCD Display and the touch interface*/
+	/* Initialize the LCD Display and the touch interface */
 	IOE_Config();
 	STM32f4_Discovery_LCD_Init();
 	InitTouch(-0.0853, 0.0665, -331, 15);

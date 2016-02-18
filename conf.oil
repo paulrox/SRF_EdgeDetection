@@ -96,6 +96,7 @@ CPU mySystem {
 		USERESSCHEDULER = FALSE;
 
 		KERNEL_TYPE = ECC1;
+		
 	};
 	
 	COUNTER myCounter {

@@ -24,8 +24,8 @@
 #define RANGE_REG	0x02	/* range register */
 #define RES_INCH	0x50	/* ranging results in inches */
 #define RES_CM		0x51	/* ranging results in centimeters */
-#define RANGE		140 	/* 6 meters range */
-#define MAX_GAIN	0x0C	/* Max gain 145 */
+#define RANGE		30		/* 1.33 meters range */
+#define MAX_GAIN	0x02	/* Max gain 100 */
 #define MAX_REG		35		/* max device register */
 
 /**
@@ -57,11 +57,16 @@
 /**
  * @brief Other macros
  */
-#define K			0.85 	/* round correlation constant */
-#define F			0.75	/* samples filtering constant */
+#define K			0.75 	/* round correlation constant */
+#define F			0.60	/* samples filtering constant */
 
 #define MAX_POINTS	290		/* max stored samples */
 #define MAX_ROUNDS	1		/* max ranging rounds */
+
+/* show the original samples from the range finder */
+/* #define NO_FILTER */
+/* reverse the order in which the samples are drawn */
+#define REVERSE_SAMPLES
 
 /**
  * @}
